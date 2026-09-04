@@ -196,3 +196,4 @@ self.addEventListener('periodicsync', (event) => {
     })());
   }
 });
+
