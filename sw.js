@@ -14,7 +14,7 @@
 // with the browser running) gives the most reliable results with this
 // pure HTML+SW approach.
 
-const CACHE_NAME = 'alarm-app-v1';
+const CACHE_NAME = 'alarm-app-v2';
 const STATE_CACHE_NAME = 'alarm-app-state-v1';
 const ASSETS = [
   './',
