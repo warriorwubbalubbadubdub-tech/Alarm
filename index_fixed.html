@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Alarm">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Alarm</title>
+<style>
+  :root{
+    --bg:#000000;
+    --fg:#ffffff;
+    --dim:#6b6b6b;
+    --line:#1c1c1c;
+    --accent:#ffffff;
+    --danger:#ff453a;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--bg); color:var(--fg);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    overscroll-behavior:none;
+    user-select:none;
+  }
+  body{
+    display:flex; flex-direction:column;
+    min-height:100vh;
+    min-height:100dvh;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+
+  .now-clock{
+    text-align:center;
+    padding:28px 20px 8px;
+    letter-spacing:0.5px;
+  }
+  .now-time{
+    font-size:15px;
+    font-weight:500;
+    color:var(--dim);
+    font-variant-numeric: tabular-nums;
+  }
+
+  main{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:28px;
+    padding:20px;
+  }
+
+  .input-row{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    width:100%;
+  }
+  .duration-box{
+    font-size:76px;
+    font-weight:600;
+    text-align:center;
+    width:130px;
+    max-width:38vw;
+    font-variant-numeric: tabular-nums;
+    letter-spacing:-1px;
+    outline:none;
+    caret-color:var(--fg);
+    background:transparent;
+    border:none;
+    color:var(--fg);
+    padding:0;
+  }
+  .duration-colon{
+    font-size:76px;
+    font-weight:600;
+    color:var(--fg);
+    transform:translateY(-4px);
+  }
+  .duration-caption{
+    font-size:12px;
+    color:var(--dim);
+    text-align:center;
+    letter-spacing:1px;
+    margin-top:-18px;
+  }
+  .duration-input::placeholder{ color:#3a3a3a; }
+
+  .mode-toggle{
+    display:flex;
+    justify-content:center;
+  }
+  .mode-btn{
+    background:transparent;
+    color:var(--dim);
+    border:1px solid #2a2a2a;
+    border-radius:20px;
+    padding:8px 18px;
+    font-size:13px;
+    font-weight:500;
+  }
+  .mode-btn:active{ background:#151515; }
+
+  .result{
+    text-align:center;
+    min-height:70px;
+  }
+  .result .fire-at{
+    font-size:34px;
+    font-weight:700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing:-0.5px;
+  }
+  .result .fire-label{
+    font-size:13px;
+    color:var(--dim);
+    margin-top:6px;
+    letter-spacing:0.3px;
+  }
+
+  .presets{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    justify-content:center;
+    max-width:340px;
+  }
+  .preset-btn{
+    background:var(--line);
+    color:var(--fg);
+    border:none;
+    border-radius:20px;
+    padding:9px 16px;
+    font-size:14px;
+    font-weight:500;
+  }
+  .preset-btn:active{ background:#2c2c2c; }
+
+  .sound-bar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    width:100%;
+    max-width:340px;
+    background:var(--line);
+    border:none;
+    border-radius:14px;
+    padding:14px 18px;
+    color:var(--fg);
+    text-align:left;
+  }
+  .sound-bar:active{ background:#242424; }
+  .sound-bar-label{
+    font-size:14px;
+    font-weight:500;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .sound-bar-action{
+    font-size:13px;
+    color:var(--dim);
+    flex-shrink:0;
+  }
+
+  .action-area{
+    padding: 10px 24px 34px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    align-items:center;
+  }
+  .primary-btn{
+    width:100%;
+    max-width:340px;
+    background:var(--fg);
+    color:#000;
+    border:none;
+    border-radius:16px;
+    padding:18px;
+    font-size:18px;
+    font-weight:600;
+    letter-spacing:0.2px;
+  }
+  .primary-btn:active{ background:#d8d8d8; }
+  .primary-btn.cancel{
+    background:transparent;
+    color:var(--danger);
+    border:1px solid #3a1614;
+  }
+  .primary-btn.cancel:active{ background:#1a0d0c; }
+
+  .status-line{
+    font-size:13px;
+    color:var(--dim);
+    text-align:center;
+  }
+
+  /* Ringing overlay */
+  #ring-overlay{
+    position:fixed; inset:0;
+    background:#000;
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:40px;
+    z-index:999;
+    padding:20px;
+    text-align:center;
+  }
+  #ring-overlay.active{ display:flex; }
+  .ring-time{
+    font-size:64px;
+    font-weight:700;
+    font-variant-numeric: tabular-nums;
+    animation:pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{ opacity:1; }
+    50%{ opacity:0.4; }
+  }
+  .ring-sub{ font-size:15px; color:var(--dim); }
+  .ring-buttons{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:22px;
+  }
+  .stop-btn{
+    width:200px; height:200px;
+    border-radius:50%;
+    background:var(--fg);
+    color:#000;
+    border:none;
+    font-size:20px;
+    font-weight:700;
+    letter-spacing:0.5px;
+  }
+  .stop-btn:active{ background:#d8d8d8; }
+  .nap-btn{
+    width:140px; height:60px;
+    border-radius:30px;
+    background:transparent;
+    color:var(--fg);
+    border:1px solid #3a3a3a;
+    font-size:16px;
+    font-weight:600;
+  }
+  .nap-btn:active{ background:#151515; }
+
+  .nap-choices{
+    display:flex;
+    gap:8px;
+  }
+  .nap-choice-btn{
+    background:transparent;
+    color:var(--dim);
+    border:1px solid #3a3a3a;
+    border-radius:16px;
+    padding:8px 16px;
+    font-size:14px;
+    font-weight:500;
+  }
+  .nap-choice-btn.active{
+    background:var(--fg);
+    color:#000;
+    border-color:var(--fg);
+    font-weight:700;
+  }
+  .nap-choice-btn:active{ background:#242424; }
+  .nap-choice-btn.active:active{ background:#d8d8d8; }
+
+  .perm-banner{
+    margin:0 20px 16px;
+    padding:12px 14px;
+    border:1px solid #2a2a2a;
+    border-radius:12px;
+    font-size:13px;
+    color:var(--dim);
+    text-align:center;
+    line-height:1.5;
+  }
+  .perm-banner button{
+    background:var(--fg);
+    color:#000;
+    border:none;
+    border-radius:10px;
+    padding:8px 14px;
+    font-size:13px;
+    font-weight:600;
+    margin-top:8px;
+  }
+</style>
+</head>
+<body>
+
+<div class="now-clock">
+  <div class="now-time" id="now-time">--:--:-- --</div>
+</div>
+
+<div id="perm-banner" class="perm-banner" style="display:none;">
+  Enable notifications so the alarm can alert you if the app is in the background.
+  <br>
+  <button id="enable-notif-btn">Enable</button>
+</div>
+
+<main>
+  <div class="input-row">
+    <input
+      id="hh-input"
+      class="duration-input duration-box"
+      type="text"
+      inputmode="numeric"
+      pattern="[0-9]*"
+      maxlength="2"
+      value="00"
+      autocomplete="off"
+      spellcheck="false"
+    >
+    <span class="duration-colon">:</span>
+    <input
+      id="mm-input"
+      class="duration-input duration-box"
+      type="text"
+      inputmode="numeric"
+      pattern="[0-9]*"
+      maxlength="2"
+      value="00"
+      autocomplete="off"
+      spellcheck="false"
+    >
+  </div>
+  <div class="duration-caption">hours : minutes</div>
+
+  <div class="mode-toggle">
+    <button class="mode-btn" id="mode-toggle-btn">Choose wake-up time instead</button>
+  </div>
+  <input type="time" id="clock-time-input" style="display:none;">
+
+  <div class="presets" id="presets">
+    <button class="preset-btn" data-val="0:30">0:30</button>
+    <button class="preset-btn" data-val="4:00">4:00</button>
+    <button class="preset-btn" data-val="6:00">6:00</button>
+    <button class="preset-btn" data-val="6:30">6:30</button>
+    <button class="preset-btn" data-val="7:00">7:00</button>
+    <button class="preset-btn" data-val="7:30">7:30</button>
+    <button class="preset-btn" data-val="8:00">8:00</button>
+    <button class="preset-btn" data-val="8:30">8:30</button>
+  </div>
+
+  <div class="presets" id="clock-presets" style="display:none;">
+    <button class="preset-btn" data-clock="07:00">7:00 AM</button>
+    <button class="preset-btn" data-clock="07:30">7:30 AM</button>
+  </div>
+
+  <div class="result" id="result">
+    <div class="fire-at" id="fire-at">--:--</div>
+    <div class="fire-label" id="fire-label">Enter a duration above</div>
+  </div>
+
+  <button class="sound-bar" id="sound-bar">
+    <span class="sound-bar-label" id="sound-bar-label">Alarm sound: default beep</span>
+    <span class="sound-bar-action">Change</span>
+  </button>
+  <input type="file" id="sound-file-input" accept="audio/*" style="display:none;">
+</main>
+
+<div class="action-area">
+  <button class="primary-btn" id="set-btn">Set Alarm</button>
+  <button class="primary-btn cancel" id="cancel-btn" style="display:none;">Cancel Alarm</button>
+  <div class="status-line" id="status-line"></div>
+</div>
+
+<div id="ring-overlay">
+  <div class="ring-sub">Alarm</div>
+  <div class="ring-time" id="ring-time">--:--</div>
+  <div class="ring-buttons">
+    <button class="stop-btn" id="stop-btn">SHUT UP</button>
+    <div class="nap-choices" id="nap-choices">
+      <button class="nap-choice-btn" data-min="5">5m</button>
+      <button class="nap-choice-btn active" data-min="10">10m</button>
+      <button class="nap-choice-btn" data-min="15">15m</button>
+    </div>
+    <button class="nap-btn" id="nap-btn">Nap 10 min</button>
+  </div>
+</div>
+
+<audio id="alarm-audio" src="alarm.mp3" loop preload="auto"></audio>
+
+<script>
+(function(){
+  "use strict";
+
+  const hhInput = document.getElementById('hh-input');
+  const mmInput = document.getElementById('mm-input');
+  const clockTimeInput = document.getElementById('clock-time-input');
+  const modeToggleBtn = document.getElementById('mode-toggle-btn');
+  const presetsWrap = document.getElementById('presets');
+  const clockPresetsWrap = document.getElementById('clock-presets');
+  const nowTimeEl = document.getElementById('now-time');
+  const fireAtEl = document.getElementById('fire-at');
+  const fireLabelEl = document.getElementById('fire-label');
+  const setBtn = document.getElementById('set-btn');
+  const cancelBtn = document.getElementById('cancel-btn');
+  const statusLine = document.getElementById('status-line');
+  const ringOverlay = document.getElementById('ring-overlay');
+  const ringTimeEl = document.getElementById('ring-time');
+  const stopBtn = document.getElementById('stop-btn');
+  const napBtn = document.getElementById('nap-btn');
+  const napChoicesWrap = document.getElementById('nap-choices');
+  const alarmAudio = document.getElementById('alarm-audio');
+  const soundBar = document.getElementById('sound-bar');
+  const soundBarLabel = document.getElementById('sound-bar-label');
+  const soundFileInput = document.getElementById('sound-file-input');
+  const permBanner = document.getElementById('perm-banner');
+  const enableNotifBtn = document.getElementById('enable-notif-btn');
+
+  const STORAGE_KEY = 'alarm-fire-timestamp';
+  let fireTimestamp = null; // ms epoch
+  let tickInterval = null;
+  let checkInterval = null;
+  let wakeLock = null;
+  let isClockMode = false; // false = duration mode, true = pick a clock time
+
+  // ---------- time formatting ----------
+  function pad(n){ return n.toString().padStart(2,'0'); }
+
+  function formatClock(date){
+    let h = date.getHours();
+    const m = date.getMinutes();
+    const s = date.getSeconds();
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12;
+    if(h === 0) h = 12;
+    return pad(h) + ':' + pad(m) + ':' + pad(s) + ' ' + ampm;
+  }
+
+  function formatClockNoSec(date){
+    let h = date.getHours();
+    const m = date.getMinutes();
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12;
+    if(h === 0) h = 12;
+    return pad(h) + ':' + pad(m) + ' ' + ampm;
+  }
+
+  function updateNowClock(){
+    nowTimeEl.textContent = formatClock(new Date());
+  }
+
+  // ---------- parse duration from the two HH / MM boxes ----------
+  function parseDuration(){
+    const h = parseInt(hhInput.value, 10);
+    const m = parseInt(mmInput.value, 10);
+    if(isNaN(h) || isNaN(m)) return null;
+    if(m < 0 || m >= 60 || h < 0) return null;
+    const totalMs = (h * 3600 + m * 60) * 1000;
+    return totalMs > 0 ? totalMs : null;
+  }
+
+  function describeDuration(ms){
+    const totalMin = Math.round(ms / 60000);
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    let out = [];
+    if(h > 0) out.push(h + (h === 1 ? ' hour' : ' hours'));
+    if(m > 0) out.push(m + (m === 1 ? ' minute' : ' minutes'));
+    if(out.length === 0) out.push('less than a minute');
+    return 'Rings in ' + out.join(' ');
+  }
+
+  // ---------- right-to-left digit fill for HH / MM boxes ----------
+  // Typing "5" then "0" produces 05 then 50, like a clock-radio input:
+  // each new digit pushes previous digits left and the box always shows 2 digits.
+  // Uses beforeinput/input (not keydown) so mobile virtual keyboards work reliably.
+  function wireDigitBox(input, maxValue){
+    input.addEventListener('focus', () => {
+      // select all so a tap+type starts fresh, matching how
+      // clock-radio style inputs behave
+      input.setSelectionRange(0, input.value.length);
+    });
+
+    input.addEventListener('beforeinput', (e) => {
+      const type = e.inputType || '';
+
+      if(type === 'insertText' || type === 'insertCompositionText' || type === 'insertFromPaste'){
+        const data = (e.data || '').replace(/\D/g, '');
+        if(data === ''){
+          e.preventDefault();
+          return;
+        }
+        e.preventDefault();
+        let current = input.value.replace(/\D/g, '').padStart(2, '0');
+        for(const digit of data){
+          current = (current + digit).slice(-2);
+        }
+        let n = parseInt(current, 10);
+        if(maxValue !== null && n > maxValue){
+          // keep only the most recent digit(s) typed, clamp to max
+          n = parseInt(data.slice(-1), 10);
+          if(n > maxValue) n = maxValue;
+        }
+        input.value = String(n).padStart(2, '0');
+        input.setSelectionRange(input.value.length, input.value.length);
+        updatePreview();
+      } else if(type === 'deleteContentBackward' || type === 'deleteContentForward'){
+        e.preventDefault();
+        input.value = '00';
+        updatePreview();
+      } else {
+        // block other edit types (formatting, etc.)
+        e.preventDefault();
+      }
+    });
+
+    // Fallback for browsers/situations where beforeinput isn't fired
+    // (keeps the box valid even if something slips through).
+    input.addEventListener('input', () => {
+      const digits = input.value.replace(/\D/g, '');
+      if(digits.length === 0){
+        input.value = '00';
+      } else {
+        let n = parseInt(digits.slice(-2), 10);
+        if(maxValue !== null && n > maxValue) n = maxValue;
+        input.value = String(n).padStart(2, '0');
+      }
+      updatePreview();
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        setAlarm();
+        input.blur();
+      }
+    });
+  }
+
+  wireDigitBox(hhInput, null);
+  wireDigitBox(mmInput, 59);
+
+  // ---------- clock-time mode helpers ----------
+  // Given "HH:MM" (24h, from <input type=time>), returns ms-from-now until
+  // the next occurrence of that clock time (today if still upcoming, else tomorrow).
+  function msUntilClockTime(hhmm){
+    if(!hhmm) return null;
+    const parts = hhmm.split(':');
+    if(parts.length !== 2) return null;
+    const h = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    if(isNaN(h) || isNaN(m)) return null;
+
+    const now = new Date();
+    const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0, 0);
+    if(target.getTime() <= now.getTime()){
+      target.setDate(target.getDate() + 1);
+    }
+    return target.getTime() - now.getTime();
+  }
+
+  // ---------- get current ms-from-now based on active mode ----------
+  function getCurrentMs(){
+    if(isClockMode){
+      return msUntilClockTime(clockTimeInput.value);
+    }
+    return parseDuration();
+  }
+
+  // ---------- preview update while typing ----------
+  function updatePreview(){
+    const ms = getCurrentMs();
+    if(ms === null){
+      fireAtEl.textContent = '--:--';
+      fireLabelEl.textContent = isClockMode ? 'Pick a wake-up time above' : 'Enter a duration above';
+      return;
+    }
+    const target = new Date(Date.now() + ms);
+    fireAtEl.textContent = formatClockNoSec(target);
+    fireLabelEl.textContent = describeDuration(ms);
+  }
+
+  clockTimeInput.addEventListener('input', updatePreview);
+
+  document.querySelectorAll('#presets .preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const [h, m] = btn.dataset.val.split(':');
+      hhInput.value = h.padStart(2, '0');
+      mmInput.value = m.padStart(2, '0');
+      updatePreview();
+    });
+  });
+
+  document.querySelectorAll('#clock-presets .preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      clockTimeInput.value = btn.dataset.clock;
+      updatePreview();
+    });
+  });
+
+  // ---------- mode toggle ----------
+  const inputRow = document.querySelector('.input-row');
+  const durationCaption = document.querySelector('.duration-caption');
+
+  function setMode(clockMode){
+    isClockMode = clockMode;
+    if(isClockMode){
+      inputRow.style.display = 'none';
+      durationCaption.style.display = 'none';
+      presetsWrap.style.display = 'none';
+      clockTimeInput.style.display = 'block';
+      clockPresetsWrap.style.display = 'flex';
+      modeToggleBtn.textContent = 'Set duration instead';
+    } else {
+      inputRow.style.display = 'flex';
+      durationCaption.style.display = 'block';
+      presetsWrap.style.display = 'flex';
+      clockTimeInput.style.display = 'none';
+      clockPresetsWrap.style.display = 'none';
+      modeToggleBtn.textContent = 'Choose wake-up time instead';
+    }
+    updatePreview();
+  }
+
+  modeToggleBtn.addEventListener('click', () => setMode(!isClockMode));
+
+  // ---------- alarm state persistence ----------
+  function saveAlarm(ts){
+    localStorage.setItem(STORAGE_KEY, String(ts));
+  }
+  function loadAlarm(){
+    const v = localStorage.getItem(STORAGE_KEY);
+    return v ? parseInt(v, 10) : null;
+  }
+  function clearAlarmStorage(){
+    localStorage.removeItem(STORAGE_KEY);
+  }
+
+  // ---------- UI state ----------
+  function showArmedUI(ts){
+    const target = new Date(ts);
+    fireAtEl.textContent = formatClockNoSec(target);
+    fireLabelEl.textContent = 'Alarm set for';
+    setBtn.style.display = 'none';
+    cancelBtn.style.display = 'block';
+    hhInput.disabled = true;
+    mmInput.disabled = true;
+    clockTimeInput.disabled = true;
+    modeToggleBtn.disabled = true;
+    document.querySelectorAll('.preset-btn').forEach(b => b.disabled = true);
+    statusLine.textContent = 'Don\'t fully close/swipe away the app before it rings — keep it running in the background.';
+  }
+
+  function showIdleUI(){
+    setBtn.style.display = 'block';
+    cancelBtn.style.display = 'none';
+    hhInput.disabled = false;
+    mmInput.disabled = false;
+    clockTimeInput.disabled = false;
+    modeToggleBtn.disabled = false;
+    document.querySelectorAll('.preset-btn').forEach(b => b.disabled = false);
+    statusLine.textContent = '';
+    updatePreview();
+  }
+
+  // ---------- set / cancel ----------
+  function setAlarm(){
+    const ms = getCurrentMs();
+    if(ms === null){
+      statusLine.textContent = isClockMode ? 'Pick a valid wake-up time first.' : 'Enter a valid duration first.';
+      return;
+    }
+    const ts = Date.now() + ms;
+    fireTimestamp = ts;
+    saveAlarm(ts);
+    showArmedUI(ts);
+    scheduleNotification(ts);
+    requestWakeLock();
+    tryRegisterPeriodicSync();
+  }
+
+  // Best-effort: some Chromium-based browsers support Periodic Background
+  // Sync for installed PWAs, which can wake the service worker briefly on
+  // its own schedule. Most browsers (notably iOS Safari) don't support this
+  // at all, and even where supported the OS can still delay or skip it —
+  // so this is a bonus attempt, not something the app depends on.
+  function tryRegisterPeriodicSync(){
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.ready.then((reg) => {
+        if('periodicSync' in reg){
+          navigator.permissions.query({ name: 'periodic-background-sync' }).then((status) => {
+            if(status.state === 'granted'){
+              reg.periodicSync.register('alarm-check', { minInterval: 60 * 1000 }).catch(() => {});
+            }
+          }).catch(() => {});
+        }
+      });
+    }
+  }
+
+  function cancelAlarm(){
+    fireTimestamp = null;
+    clearAlarmStorage();
+    cancelNotification();
+    releaseWakeLock();
+    showIdleUI();
+  }
+
+  cancelBtn.addEventListener('click', cancelAlarm);
+  setBtn.addEventListener('click', setAlarm);
+
+  // ---------- custom alarm sound ----------
+  const SOUND_KEY = 'alarm-custom-sound';
+  const SOUND_NAME_KEY = 'alarm-custom-sound-name';
+
+  function loadCustomSound(){
+    try{
+      const dataUrl = localStorage.getItem(SOUND_KEY);
+      const name = localStorage.getItem(SOUND_NAME_KEY);
+      if(dataUrl){
+        alarmAudio.src = dataUrl;
+        soundBarLabel.textContent = 'Alarm sound: ' + (name || 'custom audio');
+      }
+    }catch(e){
+      // localStorage may be full/unavailable for large files - ignore, fall back to default
+    }
+  }
+
+  function saveCustomSound(dataUrl, name){
+    try{
+      localStorage.setItem(SOUND_KEY, dataUrl);
+      localStorage.setItem(SOUND_NAME_KEY, name);
+    }catch(e){
+      statusLine.textContent = 'That file is too large to save. Try a shorter clip.';
+    }
+  }
+
+  soundBar.addEventListener('click', () => {
+    soundFileInput.click();
+  });
+
+  soundFileInput.addEventListener('change', () => {
+    const file = soundFileInput.files && soundFileInput.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      alarmAudio.src = dataUrl;
+      soundBarLabel.textContent = 'Alarm sound: ' + file.name;
+      saveCustomSound(dataUrl, file.name);
+    };
+    reader.onerror = () => {
+      statusLine.textContent = 'Could not read that audio file.';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // ---------- ringing ----------
+  // The alarm rings indefinitely: it never stops on its own. Only NAP
+  // (snoozes 5 minutes) or SHUT UP (cancels it) will silence it.
+  let vibrateInterval = null;
+  let ringClockInterval = null;
+
+  function triggerRing(){
+    ringOverlay.classList.add('active');
+    ringTimeEl.textContent = formatClockNoSec(new Date());
+
+    if(ringClockInterval) clearInterval(ringClockInterval);
+    ringClockInterval = setInterval(() => {
+      ringTimeEl.textContent = formatClockNoSec(new Date());
+    }, 1000);
+
+    alarmAudio.currentTime = 0;
+    alarmAudio.volume = 1.0;
+    alarmAudio.play().catch(()=>{ /* needs user gesture on some browsers */ });
+
+    if(navigator.vibrate){
+      const pattern = [500,300,500,300,500,1200];
+      try{ navigator.vibrate(pattern); }catch(e){}
+      if(vibrateInterval) clearInterval(vibrateInterval);
+      const patternDuration = pattern.reduce((a,b) => a+b, 0);
+      vibrateInterval = setInterval(() => {
+        try{ navigator.vibrate(pattern); }catch(e){}
+      }, patternDuration);
+    }
+  }
+
+  function stopRingVisualsAndSound(){
+    ringOverlay.classList.remove('active');
+    alarmAudio.pause();
+    alarmAudio.currentTime = 0;
+    if(ringClockInterval){ clearInterval(ringClockInterval); ringClockInterval = null; }
+    if(vibrateInterval){ clearInterval(vibrateInterval); vibrateInterval = null; }
+    if(navigator.vibrate) navigator.vibrate(0);
+  }
+
+  function shutUpAlarm(){
+    stopRingVisualsAndSound();
+    fireTimestamp = null;
+    clearAlarmStorage();
+    cancelNotification();
+    releaseWakeLock();
+    showIdleUI();
+  }
+
+  // ---------- nap length selection ----------
+  const NAP_MIN_KEY = 'alarm-nap-minutes';
+  let napMinutes = 10;
+
+  function loadNapMinutes(){
+    const stored = parseInt(localStorage.getItem(NAP_MIN_KEY), 10);
+    if(stored === 5 || stored === 10 || stored === 15){
+      napMinutes = stored;
+    }
+  }
+
+  function setNapMinutes(mins){
+    napMinutes = mins;
+    localStorage.setItem(NAP_MIN_KEY, String(mins));
+    napBtn.textContent = 'Nap ' + mins + ' min';
+    document.querySelectorAll('.nap-choice-btn').forEach(b => {
+      b.classList.toggle('active', parseInt(b.dataset.min, 10) === mins);
+    });
+  }
+
+  document.querySelectorAll('.nap-choice-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      setNapMinutes(parseInt(btn.dataset.min, 10));
+    });
+  });
+
+  function napAlarm(){
+    stopRingVisualsAndSound();
+    const ts = Date.now() + napMinutes * 60 * 1000;
+    fireTimestamp = ts;
+    saveAlarm(ts);
+    showArmedUI(ts);
+    fireLabelEl.textContent = 'Napping until';
+    scheduleNotification(ts);
+    requestWakeLock();
+  }
+
+  stopBtn.addEventListener('click', shutUpAlarm);
+  napBtn.addEventListener('click', napAlarm);
+
+  // ---------- polling loop to check if alarm should fire ----------
+  function checkAlarm(){
+    if(!fireTimestamp) return;
+    if(ringOverlay.classList.contains('active')) return; // already ringing
+    if(Date.now() >= fireTimestamp){
+      triggerRing();
+    }
+  }
+
+  // ---------- notifications via service worker (background firing) ----------
+  function scheduleNotification(ts){
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.ready.then(reg => {
+        if(reg.active){
+          reg.active.postMessage({ type: 'SCHEDULE_ALARM', fireAt: ts });
+        }
+      });
+    }
+  }
+
+  function cancelNotification(){
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.ready.then(reg => {
+        if(reg.active){
+          reg.active.postMessage({ type: 'CANCEL_ALARM' });
+        }
+      });
+    }
+  }
+
+  // Listen for message from service worker telling us alarm fired while
+  // page was open/backgrounded (e.g. user tapped the notification).
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      if(event.data && event.data.type === 'ALARM_FIRED'){
+        if(!ringOverlay.classList.contains('active')){
+          triggerRing();
+        }
+      }
+    });
+  }
+
+  // ---------- notification permission ----------
+  function maybeShowPermBanner(){
+    if('Notification' in window && Notification.permission === 'default'){
+      permBanner.style.display = 'block';
+    }
+  }
+
+  enableNotifBtn.addEventListener('click', () => {
+    if('Notification' in window){
+      Notification.requestPermission().then(() => {
+        permBanner.style.display = 'none';
+      });
+    }
+  });
+
+  // ---------- wake lock (keep screen from sleeping while armed) ----------
+  async function requestWakeLock(){
+    try{
+      if('wakeLock' in navigator){
+        wakeLock = await navigator.wakeLock.request('screen');
+      }
+    }catch(e){ /* ignore - not critical */ }
+  }
+  function releaseWakeLock(){
+    if(wakeLock){
+      wakeLock.release().catch(()=>{});
+      wakeLock = null;
+    }
+  }
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState === 'visible' && fireTimestamp){
+      requestWakeLock();
+      checkAlarm();
+    }
+  });
+
+  // ---------- service worker registration ----------
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js', {
+        scope: './'
+      }).then(registration => {
+        console.log('Service Worker registered:', registration.scope);
+      }).catch(error => {
+        console.error('Service Worker registration failed:', error);
+      });
+    });
+  }
+
+  // ---------- init ----------
+  function init(){
+    updateNowClock();
+    tickInterval = setInterval(updateNowClock, 1000);
+    checkInterval = setInterval(checkAlarm, 1000);
+    loadCustomSound();
+    loadNapMinutes();
+    setNapMinutes(napMinutes);
+
+    const stored = loadAlarm();
+    if(stored){
+      if(Date.now() >= stored){
+        fireTimestamp = stored;
+        triggerRing();
+      } else {
+        fireTimestamp = stored;
+        showArmedUI(stored);
+        requestWakeLock();
+      }
+    } else {
+      updatePreview();
+    }
+
+    maybeShowPermBanner();
+  }
+
+  init();
+})();
+</script>
+
+</body>
+</html>
